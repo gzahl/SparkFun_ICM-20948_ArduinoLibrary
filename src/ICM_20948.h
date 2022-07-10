@@ -110,6 +110,7 @@ public:
   ICM_20948_Status_e setDLPFcfg(uint8_t sensor_id_bm, ICM_20948_dlpcfg_t cfg);
   ICM_20948_Status_e enableDLPF(uint8_t sensor_id_bm, bool enable);
   ICM_20948_Status_e setSampleRate(uint8_t sensor_id_bm, ICM_20948_smplrt_t smplrt);
+  ICM_20948_Status_e ICM_20948_calibrate_accel_gyro(volatile bool &imuInterrupt, float time_s, int32_t accel_tolerance_32g) {
 
   // Interrupts on INT and FSYNC Pins
   ICM_20948_Status_e clearInterrupts(void);

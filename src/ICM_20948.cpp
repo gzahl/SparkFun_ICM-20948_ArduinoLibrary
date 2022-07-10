@@ -1796,3 +1796,118 @@ ICM_20948_Status_e ICM_20948_read_SPI(uint8_t reg, uint8_t *buff, uint32_t len, 
 
   return ICM_20948_Stat_Ok;
 }
+
+/** Accelerometer and gyroscope calibration function. Get accelerometer and
+ *  gyroscope mean values, while device is at rest and in level. Those
+ *  are then loaded into ICM20948 bias registers to remove the static 
+ *  offset error.
+ *
+ * @param[in] imuInterrupt imu interrupt flag
+ * @param[in] time_s Time period in seconds for mean value calculation
+ * @param[in] accel_tolerance_32g Maximum accelerometer mean value deviation from target value in 32g full scale format. The accelerometer
+ * target values in x and y direction are zero and in z direction it is the acceleration due to gravity.
+ * @param[in] gyro_tolerance_1000dps Maximum gyroscope mean value deviation from zero after calibration at 1000dps full scale
+ * @param[out] accelOffset_32g_xyz Accelerometer XYZ axis offsets in current full scale format.
+ * @param[out] gyroOffset_1000dps_xyz Gyroscope XYZ axis offsets in current full scale format.
+ */
+ICM_20948_Status_e ICM_20948_calibrate_accel_gyro(volatile bool &imuInterrupt, float time_s, int32_t accel_tolerance_32g, int32_t gyro_tolerance_1000dps) {
+    int16_t accelOffset_32g_xyz[3];
+    int16_t gyroOffset_1000dps_xyz[3];
+    /* Scale factor to convert accelerometer values into 32g full scale */
+    float accel_offset_scale = (m_accelRes * 32768.0f) / 32;
+    /* Scale factor to convert gyroscope values into 1000dps full scale */
+    float gyro_offset_scale = (m_gyroRes * 32768.0f) / 1000;
+    
+    /* Accelerometer tolerance in current full scale format */
+    int32_t accel_tolerance = accel_tolerance_32g * accel_offset_scale + 0.5;
+    /* Gyroscope tolerance in current full scale format */
+    int32_t gyro_tolerance = gyro_tolerance_1000dps * gyro_offset_scale + 0.5;
+    
+    int16_t mean_ax, mean_ay, mean_az, mean_gx, mean_gy, mean_gz;
+    int32_t offset_ax, offset_ay, offset_az, offset_gx, offset_gy, offset_gz;
+    
+    debugPrintLn(F("Calibrating accelerometer and gyroscope. Keep device at rest and in level ..."));
+    
+    //get_accel_offsets(accelOffset_32g_xyz);
+    //get_gyro_offsets(gyroOffset_1000dps_xyz);
+    
+    /* Convert offsets to the current accelerometer and gyroscope full scale settings */
+    offset_ax = accelOffset_32g_xyz[0] / accel_offset_scale + 0.5;
+    offset_ay = accelOffset_32g_xyz[1] / accel_offset_scale + 0.5;
+    offset_az = accelOffset_32g_xyz[2] / accel_offset_scale + 0.5;
+    offset_gx = gyroOffset_1000dps_xyz[0] / gyro_offset_scale + 0.5;
+    offset_gy = gyroOffset_1000dps_xyz[1] / gyro_offset_scale + 0.5;
+    offset_gz = gyroOffset_1000dps_xyz[2] / gyro_offset_scale + 0.5;
+    
+    static uint16_t step = 0;
+    while (1) {
+        //mean_accel_gyro(imuInterrupt, time_s, mean_ax, mean_ay, mean_az, mean_gx, mean_gy, mean_gz);
+        
+        if ((abs(mean_ax) < accel_tolerance) &&
+        (abs(mean_ay) < accel_tolerance) &&
+        (abs(mean_az - m_g) < accel_tolerance) &&
+        (abs(mean_gx) < gyro_tolerance) &&
+        (abs(mean_gy) < gyro_tolerance) &&
+        (abs(mean_gz) < gyro_tolerance)) {
+            break;
+        }
+        
+        offset_ax -= mean_ax;
+        offset_ay -= mean_ay;
+        offset_az -= mean_az - m_g;
+        offset_gx -= mean_gx;
+        offset_gy -= mean_gy;
+        offset_gz -= mean_gz;
+        
+        /* Before writing the offsets to the registers, they need need to be converted to 32g accelerometer full scale and 1000dps gyroscope full scale */
+        accelOffset_32g_xyz[0] = offset_ax * accel_offset_scale + 0.5;
+        accelOffset_32g_xyz[1] = offset_ay * accel_offset_scale + 0.5;
+        accelOffset_32g_xyz[2] = offset_az * accel_offset_scale + 0.5;
+        gyroOffset_1000dps_xyz[0] = offset_gx * gyro_offset_scale + 0.5;
+        gyroOffset_1000dps_xyz[1] = offset_gy * gyro_offset_scale + 0.5;
+        gyroOffset_1000dps_xyz[2] = offset_gz * gyro_offset_scale + 0.5;
+        
+        //set_accel_offsets(accelOffset_32g_xyz);
+        //set_gyro_offsets(gyroOffset_1000dps_xyz);
+        
+        step++;
+    }
+    
+    debugPrintLn(F("Updated internal accelerometer offsets:"));
+    debugPrint(accelOffset_32g_xyz[0]);
+    debugPrint("\t");
+    debugPrint(accelOffset_32g_xyz[1]);
+    debugPrint("\t");
+    debugPrint(accelOffset_32g_xyz[2]);
+    debugPrintLn();
+
+    debugPrintLn(F("Updated internal gyroscope offsets:"));
+    debugPrint(gyroOffset_1000dps_xyz[0]);
+    debugPrint("\t");
+    debugPrint(gyroOffset_1000dps_xyz[1]);
+    debugPrint("\t");
+    debugPrint(gyroOffset_1000dps_xyz[2]);
+    debugPrintLn();
+    
+    debugPrintLn(F("Mean accelerometer measurement error:"));
+    debugPrint(mean_ax);
+    debugPrint("\t");
+    debugPrint(mean_ay);
+    debugPrint("\t");
+    debugPrint(mean_az - m_g);
+    debugPrintLn();
+
+    debugPrintLn(F("Mean gyroscope measurement error:"));
+    debugPrint(mean_gx);
+    debugPrint("\t");
+    debugPrint(mean_gy);
+    debugPrint("\t");
+    debugPrint(mean_gz);
+    debugPrintLn();
+    
+    debugPrint(F("Step count:\t"));
+    debugPrint(step);
+    debugPrintLn();
+
+    return ICM_20948_Stat_Ok;
+}
