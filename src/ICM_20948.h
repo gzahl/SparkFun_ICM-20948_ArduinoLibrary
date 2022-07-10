@@ -110,7 +110,14 @@ public:
   ICM_20948_Status_e setDLPFcfg(uint8_t sensor_id_bm, ICM_20948_dlpcfg_t cfg);
   ICM_20948_Status_e enableDLPF(uint8_t sensor_id_bm, bool enable);
   ICM_20948_Status_e setSampleRate(uint8_t sensor_id_bm, ICM_20948_smplrt_t smplrt);
-  ICM_20948_Status_e ICM_20948_calibrate_accel_gyro(volatile bool &imuInterrupt, float time_s, int32_t accel_tolerance_32g) {
+  ICM_20948_Status_e calibrate_accel_gyro(float time_s, int32_t accel_tolerance_32g, int32_t gyro_tolerance_1000dps);
+  ICM_20948_Status_e get_accel_offsets(int16_t *accelOffset_xyz);
+  ICM_20948_Status_e get_gyro_offsets(int16_t *gyroOffset_xyz);
+  ICM_20948_Status_e set_accel_offsets(const int16_t * const accelOffset_xyz);
+  ICM_20948_Status_e set_gyro_offsets(const int16_t * const gyroOffset_xyz);
+  ICM_20948_Status_e mean_accel_gyro(float time_s, int16_t &mean_ax, int16_t &mean_ay, int16_t &mean_az, int16_t &mean_gx, int16_t &mean_gy, int16_t &mean_gz);
+  ICM_20948_Status_e read_accel_gyro(int16_t &ax, int16_t &ay, int16_t &az, int16_t &gx, int16_t &gy, int16_t &gz);
+
 
   // Interrupts on INT and FSYNC Pins
   ICM_20948_Status_e clearInterrupts(void);
@@ -157,6 +164,8 @@ public:
   // direct read/write
   ICM_20948_Status_e read(uint8_t reg, uint8_t *pdata, uint32_t len);
   ICM_20948_Status_e write(uint8_t reg, uint8_t *pdata, uint32_t len);
+  void write_register(uint16_t addr, uint8_t data);
+
 
   //Mag specific
   ICM_20948_Status_e startupMagnetometer(bool minimal = false); // If minimal is true, several startup steps are skipped. The mag then needs to be set up manually for the DMP.
