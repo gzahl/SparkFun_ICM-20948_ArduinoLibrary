@@ -1845,7 +1845,7 @@ ICM_20948_Status_e ICM_20948::calibrate_accel_gyro(float time_s, int32_t accel_t
     offset_gz = gyroOffset_1000dps_xyz[2] / gyro_offset_scale + 0.5;
     
     static uint16_t step = 0;
-    while (1) {
+    while (step < 20) {
         mean_accel_gyro(time_s, mean_ax, mean_ay, mean_az, mean_gx, mean_gy, mean_gz);
         
         if ((abs(mean_ax) < accel_tolerance) &&
@@ -1927,7 +1927,7 @@ ICM_20948_Status_e ICM_20948::calibrate_accel_gyro(float time_s, int32_t accel_t
  ******************************************************************************/
 ICM_20948_Status_e ICM_20948::get_accel_offsets(int16_t *accelOffset_xyz) {
     static uint8_t data[6];
-    
+    setBank(1);
     /* Read x offset registers into a data array */
     read(AGB1_REG_XA_OFFS_H, &data[0], 2);
     /* Read y offset registers into a data array */
@@ -1953,6 +1953,7 @@ ICM_20948_Status_e ICM_20948::get_accel_offsets(int16_t *accelOffset_xyz) {
 ICM_20948_Status_e ICM_20948::get_gyro_offsets(int16_t *gyroOffset_xyz) {
     static uint8_t data[6];
     
+    setBank(2);
     /* Read x raw data registers into a data array */
     read(AGB2_REG_XG_OFFS_USRH, &data[0], 2);
     /* Read y raw data registers into a data array */
@@ -1981,6 +1982,7 @@ ICM_20948_Status_e ICM_20948::set_accel_offsets(const int16_t * const accelOffse
     
     /* Bit 0 of the LSB offset register must be preserved, since it is used for temperature compensation calculations (? the data sheet is not clear). */
     
+    setBank(1);
     /* Read x LSB offset register into a data array */
     read(AGB1_REG_XA_OFFS_L, &data[0], 1);
     /* Read y LSB offset register into a data array */
@@ -2013,6 +2015,7 @@ ICM_20948_Status_e ICM_20948::set_accel_offsets(const int16_t * const accelOffse
  ******************************************************************************/
 ICM_20948_Status_e ICM_20948::set_gyro_offsets(const int16_t * const gyroOffset_xyz) {
     /* Write x offset to registers */
+    setBank(2);
     write_register(AGB2_REG_XG_OFFS_USRH, (uint8_t) (gyroOffset_xyz[0] >> 8));
     write_register(AGB2_REG_XG_OFFS_USRL, (uint8_t) (gyroOffset_xyz[0] & 0xFF));
     /* Write y offset to registers */
